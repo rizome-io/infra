@@ -1,0 +1,74 @@
+#+TITLE: Usage
+
+* LOCAL VARS :noexport:
+# Local Variables:
+# host: "HOST"
+# sat: "SAT"
+# bp: "BP"
+# rl: "RL"
+# sathost: (concat sat "_" host)
+# keypath: "../../../do_rsa"
+# End:
+
+* Setup
+:PROPERTIES:
+:header-args: :dir /Users/andy/ubuntu-docker-m1/cardano/infra/candy :results drawer :var RELAY_HOST="roast-relay" PRODUCER_HOST="roast-bp" SATTELITE_HOST=(eval sathost) KEY_PATH=(eval keypath)
+:END:
+
+** Upload and run setup
+upload server setup
+#+begin_src sh
+pushd ./scripts
+./upload-server-setup.sh $RELAY_HOST $KEY_PATH
+popd
+#+end_src
+
+#+begin_src sh
+ssh -i $KEY_PATH root@$RELAY_HOST
+chmod +x ~/setup-server.sh
+./setup-server.sh
+#+end_src
+
+** upload sattelite build scripts
+#+begin_src sh
+./upload.sh $SATTELITE_HOST $KEY_PATH setup-sat.sh setup-sat.sh
+./upload.sh $SATTELITE_HOST $KEY_PATH build-cardano-node.sh build-cardano-node.sh
+#+end_src
+
+** cncli on sattelite
+#+begin_src sh
+./upload.sh $SATTELITE_HOST $KEY_PATH setup-sat-cncli.sh setup-sat-cncli.sh
+./upload.sh $SATTELITE_HOST $KEY_PATH build-cncli.sh build-cncli.sh
+#+end_src
+** download compiled
+#+begin_src sh
+./download-files.sh $SATTELITE_HOST $KEY_PATH deps/cardano/build ./
+./download-files.sh $SATTELITE_HOST $KEY_PATH deps/cncli/build ./
+#+end_src
+
+
+** upload artefacts to nodes
+#+begin_src sh
+./upload.sh $RELAY_HOST $KEY_PATH node-setup.sh node-setup.sh
+./upload.sh $PRODUCER_HOST $KEY_PATH build/ deps
+
+#+end_src
+
+** start guild operation
+#+begin_src sh
+sudo cp build/cncli /usr/local/bin/
+sudo cp build/cardano-node/cardano-cli /usr/local/bin/
+sudo cp build/libsodium/libsodium.* /usr/local/lib/
+#+end_src
+
+** upload hot operation files
+#+begin_src sh
+./upload.sh $PRODUCER_HOST $KEY_PATH bp-op bp-op
+#+end_src
+
+** fix permissions on hot operation files
+#+begin_src sh
+cd priv/pool
+chmod -o *
+chmod u+r *
+#+end_src
